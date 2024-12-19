@@ -1,0 +1,54 @@
+# EMLX test
+
+## Section
+
+Install deps
+
+```elixir
+Mix.install([
+  {:bumblebee, github: "elixir-nx/bumblebee", override: true},
+  {:emlx, github: "elixir-nx/emlx"},
+  {:kino_bumblebee, "~> 0.5.1"}
+])
+```
+
+Set defaults
+
+```elixir
+#Nx.global_default_backend(EMLX.Backend)
+Nx.global_default_backend({EMLX.Backend, device: :gpu})
+
+Nx.Defn.default_options(compiler: EMLX)
+```
+
+```elixir
+model_name = "microsoft/resnet-18"
+{:ok, model} = Bumblebee.load_model({:hf, model_name})
+{:ok, featurizer} = Bumblebee.load_featurizer({:hf, model_name})
+serving = Bumblebee.Vision.image_classification(model, featurizer)
+```
+
+Load image
+
+```elixir
+image_input = Kino.Input.image("Select image", size: {224, 224})
+```
+
+```elixir
+image = Kino.Input.read(image_input)
+```
+
+Build a tensor from the raw pixel data
+
+```elixir
+image =
+  image.file_ref
+  |> Kino.Input.file_path()
+  |> File.read!()
+  |> Nx.from_binary(:u8)
+  |> Nx.reshape({image.height, image.width, 3})
+```
+
+```elixir
+Nx.Serving.run(serving, image)
+```
